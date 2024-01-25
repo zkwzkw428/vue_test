@@ -1,0 +1,105 @@
+<template>
+<li>
+    <label>
+        <input type="checkbox" :checked="todoObj.done" @change="handleChecked(todoObj.id)"/>
+        <!-- 以下代码也能够实现改变是否选择状态引起数据的变化,但是不建议使用，因为通过props传递的数据最好是不要改变，即使改变对象里面深层次的属性 -->
+        <!-- <input type="checkbox" v-model:="todoObj.done"/> -->
+        <span v-show="!todoObj.isEdit">{{ todoObj.title }}</span>
+        <input 
+        type="text"
+        ref="inputTitle"
+        @blur="handleblur(todoObj,$event)" 
+        v-show="todoObj.isEdit" 
+        :value="todoObj.title">
+    </label>
+    <button class="btn btn-danger" @click="handlesDelete(todoObj.id)">删除</button>
+    <button v-show="!todoObj.isEdit" class="btn btn-editing" @click="handleEdit(todoObj)">编辑</button>
+</li>
+</template>
+
+<script>
+import PubSub from 'pubsub-js'
+export default {
+  name: 'MyItem',
+    // 声明接受todo对象以及改变选择状态的方法
+    props: ['todoObj'],
+    methods: {
+      handleChecked(id) {
+        // 通知App组件将对应的todo对象的done取反
+        // this.changeChecked(id)
+        this.$bus.$emit('changeChecked',id)
+      },
+      handlesDelete(id) {
+        // 获取id删除对应的对象
+        // console.log(id);
+        if (confirm('是否确实删除该事项?')) {
+          //  this.handleDelete(id)
+          PubSub.publish('deleteTodo',id)
+        }
+      },
+      // 编辑
+      handleEdit(todoObj){
+        // 此种方式没有响应式
+        // todo.isEdit = false
+        if('isEdit' in todoObj){
+          todoObj.isEdit = true
+        }else{
+          // console.log('@');
+          this.$set(todoObj,'isEdit',true)
+        }
+        // 定时器实现焦点事件绑定
+        // setTimeout(()=>{
+        //   this.$refs.inputTitle.focus()
+        // },200)
+
+        // 利用$nextTick()
+        this.$nextTick(()=>{
+          console.log(this);
+          this.$refs.inputTitle.focus()
+        })
+      },
+      // 失去焦点时回调，真正修改的逻辑
+      handleblur(todoObj,e){
+       todoObj.isEdit = false
+      //  console.log(e.target.value);
+       if(!e.target.value.trim()) return alert('输出不能为空')
+       this.$bus.$emit('updateTodo',todoObj.id,e.target.value)
+      }
+    },
+}
+</script>
+
+<style scoped>
+li{ 
+    list-style: none;
+    height: 36px;
+    line-height: 36px;
+    padding: 0 5px;
+    border-bottom: 1px solid #ddd;
+  }
+  li label{
+    float: left;
+    cursor: pointer;
+  }
+  li label li input{
+    vertical-align: middle;
+    margin-right: 6px;
+    position: relative;
+    top: -1px;
+  }
+  li button {
+    float: right;
+    display: none;
+    margin-top: 3px;
+  }
+  li:before{
+    content:initial
+  }
+  li:last-child{
+    border-bottom: none;
+  }
+  /*添加悬浮效果*/
+  li:hover button{
+    display: block;
+  }
+</style>
